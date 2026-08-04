@@ -63,10 +63,35 @@
 
   .tablewrap{flex:1;display:grid;place-items:center;padding:14px;overflow:hidden;min-height:0}
   .table{position:relative;width:min(94vw,980px,calc((100dvh - 172px) * 1.6));aspect-ratio:16/10;
-    background:radial-gradient(120% 120% at 50% 38%,#141924,#080a11 78%);
-    border:14px solid #0b0c11;border-radius:50%/50%;
-    box-shadow:inset 0 0 80px rgba(0,0,0,.72),inset 0 0 0 2px rgba(233,198,90,.26),0 0 74px rgba(43,127,255,.20),0 20px 50px rgba(0,0,0,.55)}
-  .table::after{content:"";position:absolute;inset:22px;border-radius:50%/50%;border:2px dashed rgba(233,198,90,.16)}
+    --felt1:#123a6b; --felt2:#08172e; --led:#2b7fff; --ledsoft:rgba(43,127,255,.55);
+    background:
+      radial-gradient(60% 46% at 50% 40%,rgba(255,255,255,.06),transparent 70%),
+      radial-gradient(120% 120% at 50% 34%,var(--felt1),var(--felt2) 74%);
+    border:15px solid #0c0d12;border-radius:50%/50%;
+    box-shadow:
+      inset 0 0 0 2px rgba(0,0,0,.55),
+      inset 0 8px 22px rgba(0,0,0,.6),
+      inset 0 0 95px rgba(0,0,0,.78),
+      0 0 46px var(--ledsoft),
+      0 26px 60px rgba(0,0,0,.62),
+      0 8px 0 rgba(0,0,0,.45)}
+  /* temas de color intercambiables (colores clásicos de mesa de póker) */
+  .table.t-blue{--felt1:#123a6b;--felt2:#08172e;--led:#2b7fff;--ledsoft:rgba(43,127,255,.55)}
+  .table.t-green{--felt1:#0e4a2c;--felt2:#052414;--led:#22e070;--ledsoft:rgba(34,224,112,.5)}
+  .table.t-red{--felt1:#5a1422;--felt2:#280910;--led:#ff2f49;--ledsoft:rgba(255,47,73,.5)}
+  /* tira LED interior brillante */
+  .table::before{content:"";position:absolute;inset:1px;border-radius:50%/50%;pointer-events:none;z-index:0;
+    border:2px solid var(--led);
+    box-shadow:0 0 10px var(--led),0 0 22px var(--ledsoft),inset 0 0 16px var(--ledsoft);
+    animation:ledPulse 3.4s ease-in-out infinite}
+  /* filo interno sutil sobre el fieltro */
+  .table::after{content:"";position:absolute;inset:20px;border-radius:50%/50%;pointer-events:none;z-index:0;
+    border:1px solid rgba(233,198,90,.16);box-shadow:inset 0 0 40px rgba(0,0,0,.45)}
+  /* logo difuminado como marca de agua del fieltro */
+  .feltLogo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:42%;max-width:340px;aspect-ratio:1/1;background-repeat:no-repeat;background-position:center;
+    background-size:contain;opacity:.13;filter:blur(1.4px) saturate(.85);pointer-events:none;z-index:0}
+  @keyframes ledPulse{0%,100%{opacity:.82}50%{opacity:1}}
   .center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;width:60%}
   .board{display:flex;gap:8px;justify-content:center;min-height:74px;margin-bottom:8px}
   .pot{font-size:15px;color:var(--gold);font-weight:700}
@@ -212,7 +237,7 @@
     100%{transform:translateY(110vh) rotate(720deg);opacity:.85}
   }
   @media(prefers-reduced-motion:reduce){
-    .pcard.deal,.seat.winner .seatbox,.win-banner,.win-banner .trophy,.confetti span{animation:none}
+    .pcard.deal,.seat.winner .seatbox,.win-banner,.win-banner .trophy,.confetti span,.table::before{animation:none}
   }
 </style>
 </head>
@@ -266,10 +291,12 @@
     <button class="btn sec" id="btnStart" style="padding:8px 12px;font-size:13px">Repartir</button>
     <button class="btn sec" id="btnCopy" style="padding:8px 12px;font-size:13px">Copiar código</button>
     <button class="btn sec" id="btnRules" style="padding:8px 12px;font-size:13px">📖 Reglas</button>
+    <button class="btn sec" id="btnTableColor" style="padding:8px 12px;font-size:13px" title="Cambiar color de la mesa">🎨 Color</button>
   </div>
 
   <div class="tablewrap">
     <div class="table" id="table">
+      <div class="feltLogo" id="feltLogo"></div>
       <div class="center">
         <div class="board" id="board"></div>
         <div class="pot" id="pot">Bote: 0</div>
@@ -1121,6 +1148,22 @@ function closeRules(){ $('rulesModal').classList.add('hidden'); }
 $('btnRulesLobby').onclick=openRules;
 $('btnRules').onclick=openRules;
 $('btnRulesClose').onclick=closeRules;
+
+// --- Mesa: marca de agua del logo + ciclo de color (rojo/azul/verde) ---
+(function(){
+  try{
+    const bl=document.querySelector('.brandLogo'), fl=$('feltLogo');
+    if(bl && fl) fl.style.backgroundImage='url("'+bl.getAttribute('src')+'")';
+  }catch(e){}
+  const t=$('table'); if(t && !/t-(blue|green|red)/.test(t.className)) t.classList.add('t-blue');
+})();
+const TABLE_COLORS=['t-blue','t-green','t-red'];
+$('btnTableColor').onclick=()=>{
+  const t=$('table'); if(!t) return;
+  let i=TABLE_COLORS.findIndex(c=>t.classList.contains(c));
+  t.classList.remove(...TABLE_COLORS);
+  t.classList.add(TABLE_COLORS[(i+1)%TABLE_COLORS.length]);
+};
 $('rulesModal').addEventListener('click',e=>{ if(e.target.id==='rulesModal') closeRules(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeRules(); });
 
