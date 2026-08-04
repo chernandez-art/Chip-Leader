@@ -101,6 +101,12 @@
   .seatbox{background:rgba(12,14,22,.8);border:1px solid var(--line);border-radius:12px;padding:7px 8px;
     transition:border-color .2s,box-shadow .2s}
   .seat.turn .seatbox{border-color:var(--gold);box-shadow:0 0 0 2px rgba(232,195,74,.35),0 0 18px rgba(232,195,74,.25)}
+  .actclock{height:5px;margin:5px 6px 0;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+  .actclock-fill{height:100%;width:100%;background:#22e070;border-radius:3px;transition:width .12s linear,background .3s}
+  .actbar-clock{flex:1 0 100%;display:flex;align-items:center;gap:10px;max-width:520px;margin:0 auto 4px}
+  .actbar-clock .acb-num{font-weight:800;font-size:16px;min-width:40px;text-align:center}
+  .actbar-clock .acb-track{flex:1;height:8px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden}
+  .actbar-clock .acb-fill{height:100%;width:100%;background:#22e070;border-radius:5px;transition:width .12s linear,background .3s}
   .seat.folded{opacity:.42}
   .seat .nm{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .seat .st{font-size:12px;color:var(--gold)}
@@ -693,6 +699,7 @@ function showdown(){
 }
 
 function finishHand(){
+  clearTurnClock();
   G.inHand=false; G.toAct=null;
   // eliminar (sentar fuera) a quien se quedó sin fichas
   for(const s of G.seats){ if(s.chips<=0) s.sittingOut=true; }
@@ -706,12 +713,27 @@ function finishHand(){
   }, 4200);
 }
 
+// ---- Reloj de acción: cada decisión de una persona tiene tiempo límite ----
+const TURN_MS=30000;                       // 30 s por decisión
+let HOST_TURN_TIMER=null, HOST_TURN_START=0;
+function clearTurnClock(){ if(HOST_TURN_TIMER){ clearTimeout(HOST_TURN_TIMER); HOST_TURN_TIMER=null; } HOST_TURN_START=0; }
+function hostTurnTimeout(pid){
+  if(!IS_HOST || !G.inHand || G.toAct!==pid) return;
+  const toCall=G.currentBet-(G.bet[pid]||0);
+  applyAction(pid, toCall>0 ? 'fold' : 'check');   // se agotó el tiempo: pasa si puede, si no se retira
+}
 function afterAdvance(){
+  clearTurnClock();
+  // arrancar el reloj sólo si el que actúa es una persona (los bots juegan solos)
+  if(IS_HOST && G.inHand && G.toAct){
+    const s=seatById(G.toAct);
+    if(s && !s.isBot) HOST_TURN_START=Date.now();
+  }
   broadcast();
-  // si el que sigue es un bot, jugar tras una pausa
   if(IS_HOST && G.inHand && G.toAct){
     const s=seatById(G.toAct);
     if(s && s.isBot) setTimeout(()=>botPlay(s.id), 850);
+    else if(s) HOST_TURN_TIMER=setTimeout(()=>hostTurnTimeout(s.id), TURN_MS+600);
   }
 }
 
@@ -770,7 +792,9 @@ function stateFor(viewerId){
     currentBet:G.currentBet, minRaise:G.minRaise, toAct:G.toAct, street:G.street,
     result:G.result, handNo:G.handNo, seats, viewerId,
     winners:G.winners||[], winMsg:G.winMsg||null,
-    startStack:G.startStack
+    startStack:G.startStack,
+    turnMs:TURN_MS,
+    turnRemainingMs:(G.inHand && G.toAct && HOST_TURN_START) ? Math.max(0, TURN_MS-(Date.now()-HOST_TURN_START)) : null
   };
 }
 function broadcast(){
@@ -940,6 +964,7 @@ function renderState(st){
         <div class="cards">${cardsHtml}</div>
         <div class="st">${s.chips}</div>
         <div class="tag">${statusTag}</div>
+        ${(st.toAct===s.id && st.turnRemainingMs!=null)?'<div class="actclock"><div class="actclock-fill"></div></div>':''}
       </div>
       ${s.bet>0?`<div class="betchip">${s.bet}</div>`:''}
     `;
@@ -971,7 +996,12 @@ function renderState(st){
     if(key!==WIN_KEY){ WIN_KEY=key; celebrateWin(st.winMsg); }
   }
 
+  // reloj de acción: sincroniza la cuenta regresiva con el tiempo que manda el anfitrión
+  if(st.turnRemainingMs!=null){ TURN_UI={ endsAt:performance.now()+st.turnRemainingMs, total:st.turnMs||TURN_MS }; }
+  else TURN_UI=null;
+
   renderActions(st);
+  ensureTurnTicker(); tickTurnUI();
 }
 let LAST_BOARD_N=0, LAST_HAND_NO=0, WIN_KEY='';
 function celebrateWin(msg){
@@ -1013,6 +1043,21 @@ function seatSlot(rel,n){
 }
 
 let CUR=null;
+// ---- Reloj de acción (lado del cliente): cuenta regresiva visual ----
+let TURN_UI=null, TURN_TICK=null;
+function ensureTurnTicker(){ if(!TURN_TICK) TURN_TICK=setInterval(tickTurnUI,100); }
+function turnColor(f){ return f<0.34 ? '#ff3b4e' : (f<0.6 ? '#f4b73c' : '#22e070'); }
+function tickTurnUI(){
+  const t=TURN_UI;
+  if(!t){ document.querySelectorAll('.actclock-fill,.acb-fill').forEach(e=>{ e.style.width='0%'; }); return; }
+  const remain=Math.max(0, t.endsAt - performance.now());
+  const frac=t.total ? remain/t.total : 0;
+  const secs=Math.ceil(remain/1000);
+  const col=turnColor(frac);
+  document.querySelectorAll('.seat.turn .actclock-fill').forEach(e=>{ e.style.width=(frac*100)+'%'; e.style.background=col; });
+  const num=document.getElementById('actClockNum'); if(num) num.textContent=secs;
+  const fill=document.getElementById('actClockFill'); if(fill){ fill.style.width=(frac*100)+'%'; fill.style.background=col; }
+}
 function renderActions(st){
   const bar=$('actionbar');
   const me=st.seats.find(s=>s.id===st.viewerId);
@@ -1035,6 +1080,11 @@ function renderActions(st){
   const canRaise=maxTotal>st.currentBet;
 
   bar.innerHTML='';
+  // reloj de acción (tu turno): número grande + barra que se vacía
+  const clock=document.createElement('div'); clock.className='actbar-clock';
+  clock.innerHTML='<span class="acb-num" id="actClockNum">30</span>'+
+    '<div class="acb-track"><div class="acb-fill" id="actClockFill"></div></div>';
+  bar.appendChild(clock);
   // Fold
   const fold=btn('abtn fold', canCheck?'Retirarse':'Retirarse');
   fold.onclick=()=>sendAction('fold');
