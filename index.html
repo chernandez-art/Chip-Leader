@@ -1413,18 +1413,18 @@ $('btnLogout').onclick=()=>{ if(AUTH) AUTH.signOut(); };
 let myChipsUnsub=null, adminUnsub=null;
 function stopChipWatchers(){ if(myChipsUnsub){myChipsUnsub();myChipsUnsub=null;} if(adminUnsub){adminUnsub();adminUnsub=null;} }
 function ensureProfile(user){
+  if(!DB || !user) return;
   const ref=DB.collection('users').doc(user.uid);
   ref.get().then(snap=>{
     if(!snap.exists){
-      ref.set({
+      return ref.set({
         name:(user.displayName||(user.email||'').split('@')[0]||'Jugador').slice(0,14),
-        email:(user.email||''), chips:0,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      }).catch(()=>{});
+        email:(user.email||''), chips:0, createdAt:Date.now()
+      });
     } else if(user.displayName && snap.data().name!==user.displayName){
-      ref.update({ name:user.displayName.slice(0,14) }).catch(()=>{});
+      return ref.update({ name:user.displayName.slice(0,14) });
     }
-  }).catch(()=>{});
+  }).catch(e=>{ toast('No se pudo crear tu perfil: '+(e&&(e.code||e.message)||'error')); });
 }
 function watchMyChips(uid){
   if(myChipsUnsub) myChipsUnsub();
@@ -1463,7 +1463,7 @@ function renderAdminUsers(users){
     box.appendChild(row);
   });
 }
-function openAdmin(){ $('adminModal').classList.remove('hidden'); }
+function openAdmin(){ $('adminModal').classList.remove('hidden'); if(AUTH&&AUTH.currentUser) ensureProfile(AUTH.currentUser); }
 function closeAdmin(){ $('adminModal').classList.add('hidden'); }
 $('btnAdmin').onclick=openAdmin;
 $('btnAdminClose').onclick=closeAdmin;
