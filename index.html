@@ -1007,7 +1007,6 @@ function leaveTable(){
   backToLobby();
   toast('Saliste de la mesa');
 }
-$('btnLeave').onclick=leaveTable;
 function sendAction(action,amount){
   if(IS_HOST){ applyAction(MY_ID,action,amount); }
   else if(HOST_CONN){ HOST_CONN.send({type:'action',action,amount}); }
@@ -1332,6 +1331,7 @@ function openRules(){ buildHandRanks(); $('rulesModal').classList.remove('hidden
 function closeRules(){ $('rulesModal').classList.add('hidden'); }
 $('btnRulesLobby').onclick=openRules;
 $('btnRules').onclick=openRules;
+$('btnLeave').onclick=leaveTable;
 $('btnRulesClose').onclick=closeRules;
 
 // --- Mesa: marca de agua del logo + ciclo de color (rojo/azul/verde) ---
