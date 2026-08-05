@@ -355,6 +355,7 @@
     <button class="btn sec" id="btnCopy" style="padding:8px 12px;font-size:13px">Copiar código</button>
     <button class="btn sec" id="btnRules" style="padding:8px 12px;font-size:13px">📖 Reglas</button>
     <button class="btn sec" id="btnTableColor" style="padding:8px 12px;font-size:13px" title="Cambiar color de la mesa">🎨 Color</button>
+    <button class="btn sec" id="btnLeave" style="padding:8px 12px;font-size:13px;border-color:rgba(224,30,43,.55);color:#ff9aa2" title="Salir de la mesa">🚪 Salir</button>
   </div>
 
   <div class="tablewrap">
@@ -537,6 +538,12 @@ function addSeat(id,name,isBot){
   if(G.seats.length>=8) return false;
   G.seats.push({id,name,chips:G.startStack,isBot:!!isBot,sittingOut:false,connected:true});
   return true;
+}
+function removeSeat(id){
+  const i=seatIndexOfId(id); if(i<0) return;
+  G.seats.splice(i,1);
+  ['bet','committed','folded','allIn','acted','live','hole'].forEach(k=>{ if(G[k]) delete G[k][id]; });
+  if(G.button>=G.seats.length) G.button = G.seats.length ? G.seats.length-1 : -1;
 }
 
 function startHand(){
@@ -774,6 +781,8 @@ function finishHand(){
   G.inHand=false; G.toAct=null;
   // eliminar (sentar fuera) a quien se quedó sin fichas
   for(const s of G.seats){ if(s.chips<=0) s.sittingOut=true; }
+  // quitar del todo a quien se fue/desconectó durante la mano
+  for(let i=G.seats.length-1;i>=0;i--){ if(G.seats[i].connected===false) removeSeat(G.seats[i].id); }
   broadcast();
   // preparar siguiente mano automáticamente si hay >=2 con fichas
   setTimeout(()=>{
@@ -918,11 +927,17 @@ function bindHostConns(){
     conn.on('data', msg=>handleHostMsg(conn,msg));
     conn.on('close',()=>{
       const id=conn.metadata&&conn.metadata.id;
-      if(id){ const s=seatById(id); if(s){ s.sittingOut=true; s.connected=false; log(`${s.name} se desconectó`);
-        if(G.inHand && !G.folded[id] && G.live[id]){ // auto-fold si le tocaba
-          if(G.toAct===id) applyAction(id,'fold'); else { G.folded[id]=true; broadcast(); }
-        } else broadcast();
-      } delete CLIENTS[id]; }
+      if(id){ const s=seatById(id);
+        if(s){
+          if(G.inHand && !G.folded[id] && G.live[id]){ // en juego: sentarlo fuera y auto-fold
+            s.sittingOut=true; s.connected=false; log(`${s.name} se desconectó`);
+            if(G.toAct===id) applyAction(id,'fold'); else { G.folded[id]=true; broadcast(); }
+          } else { // fuera de mano: se lo quita del todo
+            removeSeat(id); log(`${s.name} salió de la mesa`); broadcast();
+          }
+        }
+        delete CLIENTS[id];
+      }
     });
   });
 }
@@ -956,7 +971,7 @@ function joinRoom(){
     HOST_CONN=PEER.connect(ID_PREFIX+ROOM,{reliable:true});
     HOST_CONN.on('open',()=>{ HOST_CONN.send({type:'join', name:selfName}); });
     HOST_CONN.on('data', handleClientMsg);
-    HOST_CONN.on('close',()=>{ toast('Se cerró la conexión con el anfitrión'); });
+    HOST_CONN.on('close',()=>{ if(!IS_HOST && (MY_ID||ROOM)){ toast('La mesa se cerró.'); cleanupNet(); backToLobby(); } });
     setTimeout(()=>{ if(!MY_ID) toast('No se encontró la sala '+ROOM); }, 6000);
   });
   PEER.on('error',err=>{ toast('No se pudo conectar: '+err.type); });
@@ -964,8 +979,35 @@ function joinRoom(){
 function handleClientMsg(msg){
   if(msg.type==='welcome'){ MY_ID=msg.youId; enterGame(); toast('Conectado a '+msg.room); }
   else if(msg.type==='state'){ if(!MY_ID) enterGame(); renderState(msg.state); }
+  else if(msg.type==='closed'){ toast('El anfitrión cerró la mesa'); cleanupNet(); backToLobby(); }
   else if(msg.type==='error'){ toast(msg.msg); }
 }
+
+/* --------- Salir de la mesa / volver al lobby --------- */
+function cleanupNet(){
+  try{ if(HOST_CONN) HOST_CONN.close(); }catch(e){}
+  try{ for(const k in CLIENTS){ try{ CLIENTS[k].close(); }catch(e){} } }catch(e){}
+  try{ if(PEER) PEER.destroy(); }catch(e){}
+  PEER=null; HOST_CONN=null; for(const k in CLIENTS) delete CLIENTS[k];
+}
+function backToLobby(){
+  if(typeof clearTurnClock==='function') clearTurnClock();
+  TURN_UI=null; CUR=null;
+  MY_ID=''; IS_HOST=false; ROOM='';
+  $('game').classList.add('hidden'); $('log').classList.add('hidden');
+  $('lobby').classList.remove('hidden');
+}
+function leaveTable(){
+  if(IS_HOST){
+    const hasPlayers=Object.keys(CLIENTS).length>0;
+    if(hasPlayers && !confirm('Sos el anfitrión: si salís, la mesa se cierra para todos los jugadores. ¿Salir igual?')) return;
+    for(const k in CLIENTS){ try{ CLIENTS[k].send({type:'closed'}); }catch(e){} }
+  }
+  cleanupNet();
+  backToLobby();
+  toast('Saliste de la mesa');
+}
+$('btnLeave').onclick=leaveTable;
 function sendAction(action,amount){
   if(IS_HOST){ applyAction(MY_ID,action,amount); }
   else if(HOST_CONN){ HOST_CONN.send({type:'action',action,amount}); }
