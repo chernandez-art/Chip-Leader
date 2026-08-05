@@ -88,35 +88,48 @@
   .table::after{content:"";position:absolute;inset:20px;border-radius:50%/50%;pointer-events:none;z-index:0;
     border:1px solid rgba(233,198,90,.16);box-shadow:inset 0 0 40px rgba(0,0,0,.45)}
   /* logo difuminado como marca de agua del fieltro */
-  .feltLogo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-    width:42%;max-width:340px;aspect-ratio:1/1;background-repeat:no-repeat;background-position:center;
-    background-size:contain;opacity:.13;filter:blur(1.4px) saturate(.85);pointer-events:none;z-index:0}
+  .feltLogo{position:absolute;top:44%;left:50%;transform:translate(-50%,-50%);
+    width:40%;max-width:330px;aspect-ratio:1/1;background-repeat:no-repeat;background-position:center;
+    background-size:contain;opacity:.72;filter:drop-shadow(0 6px 18px rgba(0,0,0,.55));pointer-events:none;z-index:0}
   @keyframes ledPulse{0%,100%{opacity:.82}50%{opacity:1}}
-  .center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;width:60%}
-  .board{display:flex;gap:8px;justify-content:center;min-height:74px;margin-bottom:8px}
-  .pot{font-size:15px;color:var(--gold);font-weight:700}
-  .subpot{font-size:12px;color:var(--muted)}
+  .center{position:absolute;top:33%;left:50%;transform:translate(-50%,-50%);text-align:center;width:72%}
+  .board{display:flex;gap:8px;justify-content:center;min-height:74px;margin-top:8px}
+  .pot{font-family:'Cinzel',Georgia,'Times New Roman',serif;text-transform:uppercase;letter-spacing:.06em;font-weight:700;font-size:15px;
+    display:inline-block;padding:3px 14px;border:1px solid rgba(233,198,90,.3);border-radius:20px;
+    background:linear-gradient(180deg,#f7e6a6,#e9c65a 40%,#b8892a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+  .subpot{font-size:12px;color:var(--muted);margin-top:6px}
 
-  .seat{position:absolute;transform:translate(-50%,-50%);width:132px;text-align:center}
-  .seatbox{background:rgba(12,14,22,.8);border:1px solid var(--line);border-radius:12px;padding:7px 8px;
+  .seat{position:absolute;transform:translate(-50%,-50%);width:150px;text-align:center;z-index:2}
+  .seat .cards{display:flex;gap:5px;justify-content:center;margin-bottom:-12px;position:relative;z-index:3;min-height:52px}
+  .seat .cards.mini .pcard{width:34px;height:48px;border-radius:7px}
+  .seat .cards.mini .pcard .pip{font-size:22px}
+  .seat .cards.mini .pcard .corner b{font-size:11px}
+  .seat .cards.mini .pcard .corner i{font-size:9px}
+  .plate{display:inline-flex;align-items:center;gap:8px;justify-content:center;background:rgba(10,12,20,.86);
+    border:1px solid rgba(233,198,90,.28);border-radius:30px;padding:5px 12px 5px 5px;box-shadow:0 6px 16px rgba(0,0,0,.5);
     transition:border-color .2s,box-shadow .2s}
-  .seat.turn .seatbox{border-color:var(--gold);box-shadow:0 0 0 2px rgba(232,195,74,.35),0 0 18px rgba(232,195,74,.25)}
-  .actclock{height:5px;margin:5px 6px 0;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+  .ava{position:relative;width:40px;height:40px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+    font-weight:800;font-size:14px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);
+    background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.4),transparent 60%),var(--a,#2b7fff);
+    box-shadow:inset 0 0 0 2px rgba(233,198,90,.7),0 2px 6px rgba(0,0,0,.5)}
+  .pinfo{text-align:left;min-width:0}
+  .seat .nm{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px}
+  .seat .st{font-size:13px;font-weight:800;color:var(--gold)}
+  .seat .tag{font-size:10.5px;color:var(--muted);min-height:14px;margin-top:2px}
+  .seat.turn .plate{border-color:var(--gold);box-shadow:0 0 0 2px rgba(232,195,74,.35),0 0 18px rgba(232,195,74,.28)}
+  .seat.folded{opacity:.42}
+  .actclock{height:5px;margin:5px 16px 0;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
   .actclock-fill{height:100%;width:100%;background:#22e070;border-radius:3px;transition:width .12s linear,background .3s}
   .actbar-clock{flex:1 0 100%;display:flex;align-items:center;gap:10px;max-width:520px;margin:0 auto 4px}
   .actbar-clock .acb-num{font-weight:800;font-size:16px;min-width:40px;text-align:center}
   .actbar-clock .acb-track{flex:1;height:8px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden}
   .actbar-clock .acb-fill{height:100%;width:100%;background:#22e070;border-radius:5px;transition:width .12s linear,background .3s}
-  .seat.folded{opacity:.42}
-  .seat .nm{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .seat .st{font-size:12px;color:var(--gold)}
-  .seat .cards{display:flex;gap:5px;justify-content:center;height:64px;margin:5px 0 2px}
-  .seat .tag{font-size:10.5px;color:var(--muted);min-height:14px}
-  .badge{position:absolute;top:-8px;right:-8px;background:var(--gold);color:var(--ink);border-radius:50%;
-    width:22px;height:22px;font-size:11px;font-weight:800;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.4)}
-  .betchip{position:absolute;left:50%;transform:translateX(-50%);top:100%;margin-top:6px;
-    background:#0e1017;border:1px solid var(--gold);color:var(--gold);font-size:12px;font-weight:700;
-    padding:2px 9px;border-radius:12px;white-space:nowrap}
+  .badge{position:absolute;bottom:-6px;right:-4px;background:radial-gradient(circle at 35% 30%,#fff,#dfc06a);color:var(--ink);border-radius:50%;
+    width:20px;height:20px;font-size:11px;font-weight:900;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:4}
+  .betchip{position:absolute;display:inline-flex;align-items:center;gap:5px;
+    background:rgba(10,12,20,.9);border:1px solid rgba(233,198,90,.4);color:var(--gold);font-size:12px;font-weight:700;
+    padding:2px 9px;border-radius:12px;white-space:nowrap;z-index:3}
+  .betchip::before{content:"";width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#e9c65a 60%,#b8892a);box-shadow:0 0 0 1px rgba(0,0,0,.5)}
 
   .pcard{position:relative;width:44px;height:62px;border-radius:9px;color:#161616;
     background:linear-gradient(158deg,#ffffff 0%,#ffffff 55%,#e9edf1 100%);
@@ -163,7 +176,7 @@
   .toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:#0e1017;border:1px solid var(--gold);
     color:var(--gold);padding:10px 18px;border-radius:10px;font-weight:600;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4)}
   @media(max-width:640px){
-    .seat{width:98px}.seat .cards{height:52px}
+    .seat{width:122px}.ava{width:34px;height:34px;font-size:12px}.seat .nm{max-width:74px}.plate{padding:4px 10px 4px 4px}
     .pcard{width:36px;height:50px;border-radius:7px}
     .pcard .corner b{font-size:12px}.pcard .corner i{font-size:10px}.pcard .pip{font-size:22px}
     .pcard.big{width:46px;height:66px}.pcard.big .corner b{font-size:16px}.pcard.big .corner i{font-size:13px}.pcard.big .pip{font-size:31px}
@@ -217,7 +230,7 @@
     0%,100%{box-shadow:0 0 0 2px rgba(232,195,74,.55),0 0 16px rgba(232,195,74,.35)}
     50%{box-shadow:0 0 0 3px rgba(232,195,74,.95),0 0 34px rgba(232,195,74,.75)}
   }
-  .seat.winner .seatbox{border-color:var(--gold);animation:winPulse 1s ease-in-out infinite}
+  .seat.winner .plate{border-color:var(--gold);animation:winPulse 1s ease-in-out infinite}
   .seat.winner .nm{color:var(--gold)}
   .seat.winner{z-index:5}
 
@@ -243,7 +256,7 @@
     100%{transform:translateY(110vh) rotate(720deg);opacity:.85}
   }
   @media(prefers-reduced-motion:reduce){
-    .pcard.deal,.seat.winner .seatbox,.win-banner,.win-banner .trophy,.confetti span,.table::before{animation:none}
+    .pcard.deal,.seat.winner .plate,.win-banner,.win-banner .trophy,.confetti span,.table::before{animation:none}
   }
 </style>
 </head>
@@ -304,8 +317,8 @@
     <div class="table" id="table">
       <div class="feltLogo" id="feltLogo"></div>
       <div class="center">
+        <div class="pot" id="pot">Bote total · 0</div>
         <div class="board" id="board"></div>
-        <div class="pot" id="pot">Bote: 0</div>
         <div class="subpot" id="subpot"></div>
       </div>
       <!-- seats injected here -->
@@ -921,8 +934,19 @@ function enterGame(){
 
 // posiciones de asientos alrededor de la mesa (porcentajes), rotadas para que "yo" quede abajo
 const SEAT_POS=[
-  [50,90],[86,78],[97,50],[86,22],[50,10],[14,22],[3,50],[14,78]
+  [50,90],[86,78],[92,50],[85,25],[50,14],[15,25],[8,50],[14,78]
 ];
+function seatInitials(name){
+  const p=(name||'?').trim().split(/\s+/);
+  const a=(p[0]||'?').charAt(0);
+  const b=(p[1]?p[1].charAt(0):(p[0]||'').charAt(1))||'';
+  return (a+b).toUpperCase();
+}
+function avatarColor(id){
+  const cols=['#2b7fff','#c1121f','#22a06b','#e0872b','#8f1420','#123f8a','#6a3ff2','#0e8a6e'];
+  let h=0; const str=String(id); for(let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))>>>0;
+  return cols[h%cols.length];
+}
 function renderState(st){
   CUR=st;
   $('tStatus').textContent = st.inHand
@@ -946,10 +970,11 @@ function renderState(st){
     div.className='seat'+(s.folded?' folded':'')+(st.toAct===s.id?' turn':'')+(s.id===st.viewerId?' me':'')+(isWinner?' winner':'');
     div.style.left=x+'%'; div.style.top=y+'%';
 
+    const isMe = s.id===st.viewerId;
     const isBtn=st.seats[st.button] && st.seats[st.button].id===s.id;
     let cardsHtml='';
     if(s.hole==='hidden') cardsHtml=cardBack()+cardBack();
-    else if(Array.isArray(s.hole)) cardsHtml=s.hole.map(c=>cardHtml(c)).join('');
+    else if(Array.isArray(s.hole)) cardsHtml=s.hole.map(c=>cardHtml(c, isMe)).join('');
     else cardsHtml='<div style="height:56px"></div>';
 
     let statusTag='';
@@ -957,16 +982,26 @@ function renderState(st){
     else if(s.allIn) statusTag='ALL-IN';
     else if(s.folded) statusTag='Retirado';
 
+    const clockHtml=(st.toAct===s.id && st.turnRemainingMs!=null)?'<div class="actclock"><div class="actclock-fill"></div></div>':'';
+    let betHtml='';
+    if(s.bet>0){
+      const dx=50-x, dy=50-y, mag=Math.hypot(dx,dy)||1;
+      const ox=Math.round(dx/mag*72), oy=Math.round(dy/mag*72);
+      betHtml=`<div class="betchip" style="left:50%;top:50%;transform:translate(calc(-50% + ${ox}px),calc(-50% + ${oy}px))">${s.bet}</div>`;
+    }
+
     div.innerHTML=`
-      ${isBtn?'<div class="badge">D</div>':''}
-      <div class="seatbox">
-        <div class="nm">${escapeHtml(s.name)}${s.isBot?' 🤖':''}${s.id===st.viewerId?' (tú)':''}</div>
-        <div class="cards">${cardsHtml}</div>
-        <div class="st">${s.chips}</div>
-        <div class="tag">${statusTag}</div>
-        ${(st.toAct===s.id && st.turnRemainingMs!=null)?'<div class="actclock"><div class="actclock-fill"></div></div>':''}
+      <div class="cards${isMe?'':' mini'}">${cardsHtml}</div>
+      <div class="plate">
+        <div class="ava" style="--a:${avatarColor(s.id)}">${seatInitials(s.name)}${isBtn?'<div class="badge">D</div>':''}</div>
+        <div class="pinfo">
+          <div class="nm">${escapeHtml(s.name)}${s.isBot?' 🤖':''}${isMe?' (tú)':''}</div>
+          <div class="st">${s.chips}</div>
+        </div>
       </div>
-      ${s.bet>0?`<div class="betchip">${s.bet}</div>`:''}
+      <div class="tag">${statusTag}</div>
+      ${clockHtml}
+      ${betHtml}
     `;
     table.appendChild(div);
   });
@@ -987,7 +1022,7 @@ function renderState(st){
   }
   LAST_BOARD_N = st.community.length;
 
-  $('pot').textContent='Bote: '+st.pot;
+  $('pot').textContent='Bote total · '+st.pot;
   $('subpot').textContent = st.result ? st.result : (st.pots&&st.pots.length>1?'(botes laterales activos)':'');
 
   // animación de victoria (una vez por resultado)
