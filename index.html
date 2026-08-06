@@ -903,6 +903,7 @@ function broadcast(){
 
 /* =============================== HOST NET =============================== */
 function createRoom(){
+  if(PEER){ toast('Ya estás conectado a una mesa.'); return; }
   if(MY_CHIPS<=0){ toast('No tenés fichas. Pedile al administrador que te acredite fichas.'); return; }
   IS_HOST=true; ROOM=randCode(); MY_ID=uid();
   const cfg={
@@ -911,6 +912,7 @@ function createRoom(){
   G=newGame(cfg);
   addSeat(MY_ID, selfName, false);
   seatById(MY_ID).chips = MY_CHIPS;   // traés tus fichas de la cuenta a la mesa
+  seatById(MY_ID).acct = (AUTH&&AUTH.currentUser?AUTH.currentUser.uid:null);
   LAST_SYNC = MY_CHIPS; SESSION_BUYIN = MY_CHIPS; SESSION_ENDED = false;
   PEER=new Peer(ID_PREFIX+ROOM);
   PEER.on('open',()=>{ enterGame(); toast('Sala creada: '+ROOM); broadcast(); });
@@ -962,14 +964,20 @@ function bindHostConns(){
 }
 function handleHostMsg(conn,msg){
   if(msg.type==='join'){
+    if(msg.acct && G.seats.some(s=>s.acct===msg.acct)){
+      conn.send({type:'error',msg:'Ya estás en esta mesa (quizá abierta en otra pestaña).'});
+      return;
+    }
     const id=uid();
     conn.metadata={id};
     CLIENTS[id]=conn;
     const ok=addSeat(id, (msg.name||'Jugador').slice(0,14), false);
     if(!ok){ conn.send({type:'error',msg:'La mesa está llena (8 jugadores).'}); return; }
-    seatById(id).chips = Math.max(0, Math.floor(msg.buyIn||0));   // trae sus fichas de la cuenta
+    const s=seatById(id);
+    s.chips = Math.max(0, Math.floor(msg.buyIn||0));   // trae sus fichas de la cuenta
+    s.acct = msg.acct||null;
     conn.send({type:'welcome', youId:id, room:ROOM});
-    log(`<b>${seatById(id).name}</b> se unió`);
+    log(`<b>${s.name}</b> se unió`);
     broadcast();
   }
   else if(msg.type==='action'){
@@ -984,6 +992,7 @@ function handleHostMsg(conn,msg){
 
 /* ============================== CLIENT NET ============================== */
 function joinRoom(){
+  if(PEER){ toast('Ya estás conectado a una mesa.'); return; }
   if(MY_CHIPS<=0){ toast('No tenés fichas. Pedile al administrador que te acredite fichas.'); return; }
   IS_HOST=false; ROOM=val('joinCode').toUpperCase().trim();
   if(ROOM.length<4){ toast('Código inválido'); return; }
@@ -991,7 +1000,7 @@ function joinRoom(){
   PEER=new Peer();
   PEER.on('open',()=>{
     HOST_CONN=PEER.connect(ID_PREFIX+ROOM,{reliable:true});
-    HOST_CONN.on('open',()=>{ HOST_CONN.send({type:'join', name:selfName, buyIn:MY_CHIPS}); });
+    HOST_CONN.on('open',()=>{ HOST_CONN.send({type:'join', name:selfName, buyIn:MY_CHIPS, acct:(AUTH&&AUTH.currentUser?AUTH.currentUser.uid:null)}); });
     HOST_CONN.on('data', handleClientMsg);
     HOST_CONN.on('close',()=>{ if(!IS_HOST && (MY_ID||ROOM)){ toast('La mesa se cerró.'); endSession(); cleanupNet(); backToLobby(); } });
     setTimeout(()=>{ if(!MY_ID) toast('No se encontró la sala '+ROOM); }, 6000);
