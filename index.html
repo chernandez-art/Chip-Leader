@@ -1337,7 +1337,7 @@ $('btnRulesClose').onclick=closeRules;
 // --- Mesa: marca de agua del logo + ciclo de color (rojo/azul/verde) ---
 (function(){
   try{
-    const bl=document.querySelector('.brandLogo'), fl=$('feltLogo');
+    const bl=document.querySelector('#lobby .brandLogo'), fl=$('feltLogo');
     if(bl && fl) fl.style.backgroundImage='url("'+bl.getAttribute('src')+'")';
   }catch(e){}
   const t=$('table'); if(t && !/t-(blue|green|red)/.test(t.className)) t.classList.add('t-blue');
