@@ -903,7 +903,8 @@ function broadcast(){
 
 /* =============================== HOST NET =============================== */
 function createRoom(){
-  if(PEER){ toast('Ya estás conectado a una mesa.'); return; }
+  if(MY_ID){ toast('Ya estás en una mesa. Salí primero.'); return; }
+  if(PEER){ cleanupNet(); }
   if(MY_CHIPS<=0){ toast('No tenés fichas. Pedile al administrador que te acredite fichas.'); return; }
   IS_HOST=true; ROOM=randCode(); MY_ID=uid();
   const cfg={
@@ -992,7 +993,8 @@ function handleHostMsg(conn,msg){
 
 /* ============================== CLIENT NET ============================== */
 function joinRoom(){
-  if(PEER){ toast('Ya estás conectado a una mesa.'); return; }
+  if(MY_ID){ toast('Ya estás en una mesa. Salí primero.'); return; }
+  if(PEER){ cleanupNet(); }        // limpiar un intento anterior que quedó colgado
   if(MY_CHIPS<=0){ toast('No tenés fichas. Pedile al administrador que te acredite fichas.'); return; }
   IS_HOST=false; ROOM=val('joinCode').toUpperCase().trim();
   if(ROOM.length<4){ toast('Código inválido'); return; }
@@ -1002,16 +1004,19 @@ function joinRoom(){
     HOST_CONN=PEER.connect(ID_PREFIX+ROOM,{reliable:true});
     HOST_CONN.on('open',()=>{ HOST_CONN.send({type:'join', name:selfName, buyIn:MY_CHIPS, acct:(AUTH&&AUTH.currentUser?AUTH.currentUser.uid:null)}); });
     HOST_CONN.on('data', handleClientMsg);
-    HOST_CONN.on('close',()=>{ if(!IS_HOST && (MY_ID||ROOM)){ toast('La mesa se cerró.'); endSession(); cleanupNet(); backToLobby(); } });
-    setTimeout(()=>{ if(!MY_ID) toast('No se encontró la sala '+ROOM); }, 6000);
+    HOST_CONN.on('close',()=>{
+      if(MY_ID){ toast('La mesa se cerró.'); endSession(); cleanupNet(); backToLobby(); }
+      else { cleanupNet(); ROOM=''; }   // se cortó antes de entrar: liberar para reintentar
+    });
+    setTimeout(()=>{ if(!MY_ID){ toast('No se encontró la sala '+ROOM+'. Revisá el código.'); cleanupNet(); ROOM=''; } }, 6000);
   });
-  PEER.on('error',err=>{ toast('No se pudo conectar: '+err.type); });
+  PEER.on('error',err=>{ toast('No se pudo conectar: '+err.type); if(!MY_ID){ cleanupNet(); ROOM=''; } });
 }
 function handleClientMsg(msg){
   if(msg.type==='welcome'){ MY_ID=msg.youId; enterGame(); toast('Conectado a '+msg.room); }
   else if(msg.type==='state'){ if(!MY_ID) enterGame(); renderState(msg.state); }
   else if(msg.type==='closed'){ toast('El anfitrión cerró la mesa'); endSession(); cleanupNet(); backToLobby(); }
-  else if(msg.type==='error'){ toast(msg.msg); }
+  else if(msg.type==='error'){ toast(msg.msg); if(!MY_ID){ cleanupNet(); ROOM=''; } }
 }
 
 /* --------- Salir de la mesa / volver al lobby --------- */
