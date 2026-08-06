@@ -177,6 +177,7 @@
   /* action bar */
   .actionbar{background:rgba(0,0,0,.34);border-top:1px solid var(--line);padding:12px 16px;
     display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;min-height:64px}
+  .herocards{display:none}   /* tus cartas grandes arriba de los botones (solo celular) */
   .abtn{border:none;border-radius:11px;padding:12px 20px;font-size:15px;font-weight:700;color:#fff;min-width:96px}
   .abtn.fold{background:linear-gradient(135deg,#c1121f,#7a0f1a)}.abtn.check{background:rgba(255,255,255,.07);border:1px solid var(--line)}.abtn.call{background:#1f4f8f}
   .abtn.raise{background:linear-gradient(135deg,#2f86ff,#1348a0);color:#fff;border:1px solid rgba(233,198,90,.55);box-shadow:0 0 16px rgba(43,127,255,.35)}
@@ -220,6 +221,14 @@
     .quick{flex:1 1 100%;display:flex;gap:6px}
     .quick button{flex:1;padding:9px 0;font-size:12.5px}
     .actbar-clock{flex:1 0 100%;max-width:none}
+    /* tus cartas grandes, siempre visibles arriba de los botones */
+    .herocards{display:flex;justify-content:center;gap:8px;padding:8px 0 4px}
+    .herocards:empty{display:none}
+    .herocards .pcard{width:56px;height:80px;border-radius:9px}
+    .herocards .pcard .corner b{font-size:20px}
+    .herocards .pcard .corner i{font-size:16px}
+    .herocards .pcard .pip{font-size:38px}
+    .seat.me .cards{display:none}   /* no duplicar: las cartas van en la tira */
     /* cartas */
     .pcard{width:36px;height:50px;border-radius:7px}
     .pcard .corner b{font-size:12px}.pcard .corner i{font-size:10px}.pcard .pip{font-size:22px}
@@ -397,6 +406,7 @@
     </div>
   </div>
 
+  <div class="herocards" id="heroCards"></div>
   <div class="actionbar" id="actionbar">
     <div class="status" id="waitMsg">Esperando a que empiece la mano…</div>
   </div>
@@ -1231,6 +1241,10 @@ function renderState(st){
   else TURN_UI=null;
 
   if(!st.inHand) syncBalanceToStack();   // entre manos, guardá tu stack en tu cuenta
+
+  // tus cartas grandes arriba de los botones (se ven en celular)
+  const _hc=$('heroCards');
+  if(_hc){ const _me=st.seats.find(s=>s.id===st.viewerId); _hc.innerHTML=(_me&&Array.isArray(_me.hole))?_me.hole.map(c=>cardHtml(c)).join(''):''; }
 
   renderActions(st);
   ensureTurnTicker(); tickTurnUI();
