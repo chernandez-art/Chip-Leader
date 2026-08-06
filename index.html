@@ -1013,7 +1013,8 @@ function syncBalanceToStack(){
   if(!DB || !AUTH || !AUTH.currentUser) return;
   const st=myStack(); if(st==null || st===LAST_SYNC) return;
   LAST_SYNC=st;
-  DB.collection('users').doc(AUTH.currentUser.uid).update({chips:st}).catch(()=>{});
+  DB.collection('users').doc(AUTH.currentUser.uid).update({chips:st})
+    .catch(e=>{ LAST_SYNC=-1; toast('No se pudo guardar tus fichas: '+(e&&e.code||'error')); });
 }
 function leaveTable(){
   if(IS_HOST){
