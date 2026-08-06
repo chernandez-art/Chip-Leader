@@ -502,6 +502,7 @@ let MY_ID='';              // id lógico del jugador (dentro del juego)
 let HOST_CONN=null;        // (cliente) conexión al anfitrión
 const CLIENTS={};          // (host) id lógico -> DataConnection
 let selfName='Jugador';
+let MY_CHIPS=0, LAST_SYNC=-1;   // saldo de la cuenta y último saldo sincronizado con la mesa
 
 const ID_PREFIX='fyf-poker-'; // namespace para evitar colisiones en el broker público
 function randCode(){ const L='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=L[Math.floor(Math.random()*L.length)]; return s; }
@@ -887,12 +888,15 @@ function broadcast(){
 
 /* =============================== HOST NET =============================== */
 function createRoom(){
+  if(MY_CHIPS<=0){ toast('No tenés fichas. Pedile al administrador que te acredite fichas.'); return; }
   IS_HOST=true; ROOM=randCode(); MY_ID=uid();
   const cfg={
     sb:+val('sb'), bb:+val('bb'), startStack:+val('startStack')
   };
   G=newGame(cfg);
   addSeat(MY_ID, selfName, false);
+  seatById(MY_ID).chips = MY_CHIPS;   // traés tus fichas de la cuenta a la mesa
+  LAST_SYNC = MY_CHIPS;
   PEER=new Peer(ID_PREFIX+ROOM);
   PEER.on('open',()=>{ enterGame(); toast('Sala creada: '+ROOM); broadcast(); });
   PEER.on('error',err=>{
@@ -948,6 +952,7 @@ function handleHostMsg(conn,msg){
     CLIENTS[id]=conn;
     const ok=addSeat(id, (msg.name||'Jugador').slice(0,14), false);
     if(!ok){ conn.send({type:'error',msg:'La mesa está llena (8 jugadores).'}); return; }
+    seatById(id).chips = Math.max(0, Math.floor(msg.buyIn||0));   // trae sus fichas de la cuenta
     conn.send({type:'welcome', youId:id, room:ROOM});
     log(`<b>${seatById(id).name}</b> se unió`);
     broadcast();
@@ -964,14 +969,16 @@ function handleHostMsg(conn,msg){
 
 /* ============================== CLIENT NET ============================== */
 function joinRoom(){
+  if(MY_CHIPS<=0){ toast('No tenés fichas. Pedile al administrador que te acredite fichas.'); return; }
   IS_HOST=false; ROOM=val('joinCode').toUpperCase().trim();
   if(ROOM.length<4){ toast('Código inválido'); return; }
+  LAST_SYNC = MY_CHIPS;
   PEER=new Peer();
   PEER.on('open',()=>{
     HOST_CONN=PEER.connect(ID_PREFIX+ROOM,{reliable:true});
-    HOST_CONN.on('open',()=>{ HOST_CONN.send({type:'join', name:selfName}); });
+    HOST_CONN.on('open',()=>{ HOST_CONN.send({type:'join', name:selfName, buyIn:MY_CHIPS}); });
     HOST_CONN.on('data', handleClientMsg);
-    HOST_CONN.on('close',()=>{ if(!IS_HOST && (MY_ID||ROOM)){ toast('La mesa se cerró.'); cleanupNet(); backToLobby(); } });
+    HOST_CONN.on('close',()=>{ if(!IS_HOST && (MY_ID||ROOM)){ toast('La mesa se cerró.'); syncBalanceToStack(); cleanupNet(); backToLobby(); } });
     setTimeout(()=>{ if(!MY_ID) toast('No se encontró la sala '+ROOM); }, 6000);
   });
   PEER.on('error',err=>{ toast('No se pudo conectar: '+err.type); });
@@ -979,7 +986,7 @@ function joinRoom(){
 function handleClientMsg(msg){
   if(msg.type==='welcome'){ MY_ID=msg.youId; enterGame(); toast('Conectado a '+msg.room); }
   else if(msg.type==='state'){ if(!MY_ID) enterGame(); renderState(msg.state); }
-  else if(msg.type==='closed'){ toast('El anfitrión cerró la mesa'); cleanupNet(); backToLobby(); }
+  else if(msg.type==='closed'){ toast('El anfitrión cerró la mesa'); syncBalanceToStack(); cleanupNet(); backToLobby(); }
   else if(msg.type==='error'){ toast(msg.msg); }
 }
 
@@ -992,10 +999,21 @@ function cleanupNet(){
 }
 function backToLobby(){
   if(typeof clearTurnClock==='function') clearTurnClock();
-  TURN_UI=null; CUR=null;
+  TURN_UI=null; CUR=null; LAST_SYNC=-1;
   MY_ID=''; IS_HOST=false; ROOM='';
   $('game').classList.add('hidden'); $('log').classList.add('hidden');
   $('lobby').classList.remove('hidden');
+}
+function myStack(){
+  if(CUR && CUR.seats){ const s=CUR.seats.find(x=>x.id===MY_ID); if(s) return (typeof s.chips==='number'?s.chips:0); }
+  return null;
+}
+function syncBalanceToStack(){
+  if(!(ROOM && ROOM!=='PRACT')) return;          // solo mesas online; la práctica no toca el saldo
+  if(!DB || !AUTH || !AUTH.currentUser) return;
+  const st=myStack(); if(st==null || st===LAST_SYNC) return;
+  LAST_SYNC=st;
+  DB.collection('users').doc(AUTH.currentUser.uid).update({chips:st}).catch(()=>{});
 }
 function leaveTable(){
   if(IS_HOST){
@@ -1003,6 +1021,7 @@ function leaveTable(){
     if(hasPlayers && !confirm('Sos el anfitrión: si salís, la mesa se cierra para todos los jugadores. ¿Salir igual?')) return;
     for(const k in CLIENTS){ try{ CLIENTS[k].send({type:'closed'}); }catch(e){} }
   }
+  syncBalanceToStack();     // guardá tu stack final en tu cuenta
   cleanupNet();
   backToLobby();
   toast('Saliste de la mesa');
@@ -1133,6 +1152,8 @@ function renderState(st){
   // reloj de acción: sincroniza la cuenta regresiva con el tiempo que manda el anfitrión
   if(st.turnRemainingMs!=null){ TURN_UI={ endsAt:performance.now()+st.turnRemainingMs, total:st.turnMs||TURN_MS }; }
   else TURN_UI=null;
+
+  if(!st.inHand) syncBalanceToStack();   // entre manos, guardá tu stack en tu cuenta
 
   renderActions(st);
   ensureTurnTicker(); tickTurnUI();
@@ -1472,7 +1493,8 @@ function ensureProfile(user){
 function watchMyChips(uid){
   if(myChipsUnsub) myChipsUnsub();
   myChipsUnsub=DB.collection('users').doc(uid).onSnapshot(snap=>{
-    $('myChips').textContent = (snap.exists && typeof snap.data().chips==='number') ? snap.data().chips : 0;
+    const c = (snap.exists && typeof snap.data().chips==='number') ? snap.data().chips : 0;
+    MY_CHIPS=c; $('myChips').textContent=c;
   }, ()=>{});
 }
 function watchAllUsers(){
