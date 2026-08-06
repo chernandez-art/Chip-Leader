@@ -194,10 +194,36 @@
   .toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:#0e1017;border:1px solid var(--gold);
     color:var(--gold);padding:10px 18px;border-radius:10px;font-weight:600;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.4)}
   @media(max-width:640px){
-    .seat{width:122px}.ava{width:34px;height:34px;font-size:12px}.seat .nm{max-width:74px}.plate{padding:4px 10px 4px 4px}
+    /* mesa vertical para celular */
+    .tablewrap{padding:6px}
+    .table{width:min(94vw, 54vh);aspect-ratio:5/7;border-width:11px}
+    .center{top:37%;width:88%}
+    .feltLogo{top:41%;width:54%;max-width:none;opacity:.62;filter:none}
+    .pot{font-size:13px;padding:2px 12px}
+    /* asientos compactos */
+    .seat{width:104px}
+    .ava{width:32px;height:32px;font-size:12px}
+    .seat .nm{max-width:58px;font-size:11px}
+    .seat .st{font-size:11.5px}
+    .plate{gap:6px;padding:3px 9px 3px 3px}
+    .badge{width:16px;height:16px;font-size:9px;bottom:-4px;right:-3px}
+    .seat .cards.mini .pcard{width:28px;height:40px}
+    /* topbar compacta */
+    .topbar{padding:8px 10px;gap:6px}
+    .topbar .pill{padding:4px 9px;font-size:11.5px}
+    .topbar .status{display:none}
+    .topbar .btn.sec{padding:7px 10px;font-size:12px;min-width:0}
+    /* barra de acción grande, abajo */
+    .actionbar{gap:8px;padding:10px 10px calc(12px + env(safe-area-inset-bottom))}
+    .actionbar .abtn{flex:1 1 28%;min-width:0;padding:15px 6px;font-size:15px}
+    .raisegrp{flex:1 1 100%}
+    .quick{flex:1 1 100%;display:flex;gap:6px}
+    .quick button{flex:1;padding:9px 0;font-size:12.5px}
+    .actbar-clock{flex:1 0 100%;max-width:none}
+    /* cartas */
     .pcard{width:36px;height:50px;border-radius:7px}
     .pcard .corner b{font-size:12px}.pcard .corner i{font-size:10px}.pcard .pip{font-size:22px}
-    .pcard.big{width:46px;height:66px}.pcard.big .corner b{font-size:16px}.pcard.big .corner i{font-size:13px}.pcard.big .pip{font-size:31px}
+    .pcard.big{width:48px;height:68px}.pcard.big .corner b{font-size:16px}.pcard.big .corner i{font-size:13px}.pcard.big .pip{font-size:32px}
     .log{display:none}
     .modal-box{padding:16px}.rank-cards .pcard{width:34px;height:48px}
     .rank-cards .pcard .corner b{font-size:11px}.rank-cards .pcard .corner i{font-size:9px}.rank-cards .pcard .pip{font-size:20px}
@@ -1100,6 +1126,11 @@ function enterGame(){
 const SEAT_POS=[
   [50,90],[86,78],[92,50],[85,25],[50,14],[15,25],[8,50],[14,78]
 ];
+// posiciones para celular (mesa vertical): 0 abajo-centro (vos), da la vuelta
+const MOBILE_SEAT_POS=[
+  [50,91],[82,74],[90,48],[82,20],[50,7],[18,20],[10,48],[18,74]
+];
+function isMobile(){ return window.matchMedia('(max-width:640px)').matches; }
 function seatInitials(name){
   const p=(name||'?').trim().split(/\s+/);
   const a=(p[0]||'?').charAt(0);
@@ -1128,7 +1159,7 @@ function renderState(st){
   st.seats.forEach((s,i)=>{
     const rel=(i-myIdx+n)%n;                 // 0 = yo (abajo)
     const posIdx=Math.round(rel*(8/n))%8;    // repartir en 8 anclas
-    const [x,y]=SEAT_POS[seatSlot(rel,n)];
+    const [x,y]=(isMobile()?MOBILE_SEAT_POS:SEAT_POS)[seatSlot(rel,n)];
     const div=document.createElement('div');
     const isWinner=st.winners && st.winners.includes(s.id);
     div.className='seat'+(s.folded?' folded':'')+(st.toAct===s.id?' turn':'')+(s.id===st.viewerId?' me':'')+(isWinner?' winner':'');
@@ -1421,6 +1452,10 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeRules(); });
 
 // permitir Enter en el nombre
 $('playerName').addEventListener('keydown',e=>{ if(e.key==='Enter') $('btnCreate').click(); });
+
+// reacomodar asientos al rotar el teléfono o cambiar el tamaño
+let _rzT=null;
+window.addEventListener('resize',()=>{ clearTimeout(_rzT); _rzT=setTimeout(()=>{ if(CUR) renderState(CUR); }, 150); });
 
 /* =========================== Cuentas (Firebase Auth) =========================== */
 const firebaseConfig = {
